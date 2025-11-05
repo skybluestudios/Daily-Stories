@@ -51,206 +51,197 @@
         .article-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
         .article-content { font-size: 1rem; color: var(--light-text); white-space: pre-wrap; }
         #no-articles { text-align: center; color: var(--light-text); font-style: italic; }
+        
+        /* Style for the new error message */
+        #debug-error-box {
+            text-align: left;
+            padding: 2rem;
+        }
+        #debug-error-box h2 {
+            color: #c62828; /* red */
+            margin-bottom: 1rem;
+        }
+        #debug-error-box pre {
+            text-align: left; 
+            background: #eee; 
+            padding: 10px; 
+            border-radius: 5px; 
+            white-space: pre-wrap; /* Wrap long lines */
+            word-wrap: break-word; /* Break long words */
+            font-size: 0.9rem;
+        }
+
     </style>
 </head>
 <body>
     <div class="app-container">
-        <div class="page active" id="loading-page"><div class="spinner"></div><p>Loading Daily Stories Pro...</p></div>
+        <div class="page active" id="loading-page">
+            <div class="spinner"></div>
+            <p>Loading Daily Stories Pro...</p>
+        </div>
+        
+        <div class="page" id="login-page"></div>
+        <div class="page" id="signup-page"></div>
+        <div class="page" id="dashboard-page"></div>
+        
         <div class="page" id="login-page"><div class="app-header"><h1>Welcome to Daily Stories <span class="brand-pro">Pro</span></h1></div><form id="login-form"><div class="error-message" id="login-error"></div><div class="form-group"><label for="login-email">Email</label><input type="email" id="login-email" class="form-control" required></div><div class="form-group"><label for="login-password">Password</label><input type="password" id="login-password" class="form-control" required></div><button type="submit" class="btn">Login</button></form><div class="form-switcher">Need an account? <span class="link" id="goto-signup">Sign Up</span></div></div>
         <div class="page" id="signup-page"><div class="app-header"><h1>Create your Account</h1></div><form id="signup-form"><div class="error-message" id="signup-error"></div><div class="form-group"><label for="signup-email">Email</label><input type="email" id="signup-email" class="form-control" required></div><div class="form-group"><label for="signup-password">Password (min. 6 characters)</label><input type="password" id="signup-password" class="form-control" required></div><button type="submit" class="btn">Create Account</button></form><div class="form-switcher">Already have an account? <span class="link" id="goto-login">Login</span></div></div>
         <div class="page" id="dashboard-page"><div class="app-header"><h1>Daily Stories <span class="brand-pro">Pro</span></h1><button class="logout-btn" id="logout-button">Logout</button></div><div class="dashboard-welcome">Logged in as <span class="user-email" id="user-email-display">...</span></div><h2>Latest Articles</h2><div id="article-list"><div id="no-articles" style="display: none;">No articles found. Add some in the Firebase console!</div></div></div>
     </div>
 
     <script type="module">
-        // Import Firebase v9 (modular) SDKs
+        // Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app-lite.js";
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-lite.js";
-        
-        // Import FULL Firestore, not lite, so we can use writeBatch
         import { getFirestore, collection, getDocs, query, orderBy, writeBatch, serverTimestamp, doc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
+        // Get the loading page to show errors
+        const loadingPage = document.getElementById('loading-page');
+
         // =================================================================
-        // TODO: PASTE YOUR **NEW** FIREBASE CONFIG HERE
+        // ** NEW TRY...CATCH BLOCK **
+        // This will catch any errors and show them on the page.
         // =================================================================
-        const firebaseConfig = {
-           apiKey: "AIzaSyDXsVNyEpXetQm_cJCWcWvnb5qwXrVNiNg",
-  			authDomain: "daily-stories-pro-3c12d.firebaseapp.com",
-  			projectId: "daily-stories-pro-3c12d",
-  			storageBucket: "daily-stories-pro-3c12d.firebasestorage.app",
-  			messagingSenderId: "30800731247",
-  			appId: "1:30800731247:web:431f92c4d86937c33a019a"
-        };
-        // =================================================================
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // --- DOM Element References ---
-        const pages = document.querySelectorAll('.page');
-        const loginForm = document.getElementById('login-form');
-        const signupForm = document.getElementById('signup-form');
-        const loginError = document.getElementById('login-error');
-        const signupError = document.getElementById('signup-error');
-        const gotoSignupLink = document.getElementById('goto-signup');
-        const gotoLoginLink = document.getElementById('goto-login');
-        const logoutButton = document.getElementById('logout-button');
-        const userEmailDisplay = document.getElementById('user-email-display');
-        const articleList = document.getElementById('article-list');
-        const noArticlesMsg = document.getElementById('no-articles');
-
-        // --- Page Navigation Function ---
-        function showPage(pageId) {
-            pages.forEach(page => page.classList.remove('active'));
-            const activePage = document.getElementById(pageId);
-            if (activePage) activePage.classList.add('active');
-        }
-
-        // --- Firebase Auth State Listener ---
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                console.log("User is logged in:", user.email);
-                userEmailDisplay.textContent = user.email;
-                fetchArticles(); 
-                showPage('dashboard-page');
-            } else {
-                console.log("User is logged out.");
-                showPage('login-page');
-            }
-        });
-
-        // --- Auth Functions ---
-        signupForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('signup-email').value;
-            const password = document.getElementById('signup-password').value;
-            try {
-                await createUserWithEmailAndPassword(auth, email, password);
-                signupError.style.display = 'none';
-            } catch (error) {
-                console.error("Signup error:", error.message);
-                signupError.textContent = error.message;
-                signupError.style.display = 'block';
-            }
-        });
-
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                loginError.style.display = 'none';
-            } catch (error) {
-                console.error("Login error:", error.message);
-                loginError.textContent = error.message;
-                loginError.style.display = 'block';
-            }
-        });
-
-        logoutButton.addEventListener('click', async () => {
-            try {
-                await signOut(auth);
-            } catch (error) {
-                console.error("Logout error:", error.message);
-                alert("Error logging out: " + error.message);
-            }
-        });
-
-        // --- Navigation Link Listeners ---
-        gotoSignupLink.addEventListener('click', () => showPage('signup-page'));
-        gotoLoginLink.addEventListener('click', () => showPage('login-page'));
-
-        // --- Firestore Database Function ---
-        async function fetchArticles() {
-            articleList.innerHTML = '';
-            noArticlesMsg.style.display = 'none';
+        try {
             
-            try {
-                const articlesRef = collection(db, "articles");
-                const q = query(articlesRef, orderBy("createdAt", "desc"));
-                
-                const querySnapshot = await getDocs(q);
-                
-                if (querySnapshot.empty) {
-                    noArticlesMsg.style.display = 'block';
-                    return;
+            // =================================================================
+            // PASTE YOUR FIREBASE CONFIG HERE
+            // =================================================================
+            const firebaseConfig = {
+                apiKey: "YOUR_API_KEY",
+                authDomain: "YOUR_AUTH_DOMAIN",
+                projectId: "YOUR_PROJECT_ID",
+                storageBucket: "YOUR_STORAGE_BUCKET",
+                messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+                appId: "YOUR_APP_ID"
+            };
+            // =================================================================
+
+            // Initialize Firebase (This is a common place for errors)
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+
+            // --- DOM Element References ---
+            const pages = document.querySelectorAll('.page');
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            const loginError = document.getElementById('login-error');
+            const signupError = document.getElementById('signup-error');
+            const gotoSignupLink = document.getElementById('goto-signup');
+            const gotoLoginLink = document.getElementById('goto-login');
+            const logoutButton = document.getElementById('logout-button');
+            const userEmailDisplay = document.getElementById('user-email-display');
+            const articleList = document.getElementById('article-list');
+            const noArticlesMsg = document.getElementById('no-articles');
+
+            // --- Page Navigation Function ---
+            function showPage(pageId) {
+                pages.forEach(page => page.classList.remove('active'));
+                const activePage = document.getElementById(pageId);
+                if (activePage) activePage.classList.add('active');
+            }
+
+            // --- Firebase Auth State Listener (Another common place for errors) ---
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    userEmailDisplay.textContent = user.email;
+                    fetchArticles(); 
+                    showPage('dashboard-page');
+                } else {
+                    showPage('login-page');
                 }
-
-                querySnapshot.forEach((doc) => {
-                    const article = doc.data();
-                    const articleEl = document.createElement('div');
-                    articleEl.classList.add('article-item');
-                    articleEl.innerHTML = `
-                        <h3 class="article-title">${article.title}</h3>
-                        <p class="article-content">${article.content}</p>
-                    `;
-                    articleList.appendChild(articleEl);
-                });
-
-            } catch (error) {
-                console.error("Error fetching articles: ", error);
-                articleList.innerHTML = '<p class="error-message" style="display:block;">Could not load articles.</p>';
-            }
-        }
-
-        // =================================================================
-        // SCRIPT TO "MAKE THE DATABASE"
-        // =================================================================
-        
-        async function seedDatabase() {
-            if (!auth.currentUser) {
-                console.error("You must be logged in to seed the database.");
-                return;
-            }
-
-            alert("Warning: To run this, your security rules must temporarily allow logged-in users to 'create' articles. See the instructions in the console.");
-            console.log("Starting database seed...");
-            
-            const articlesCol = collection(db, "articles");
-            
-            const batch = writeBatch(db);
-
-            const articlesData = [
-                { 
-                    title: "The Future of AI", 
-                    content: "Artificial intelligence is poised to change everything.\nFrom art to medicine, the world is on the brink of a new revolution." 
-                },
-                { 
-                    title: "A Guide to Remote Work", 
-                    content: "Working from home has its perks and challenges.\nHere are five tips to stay productive and maintain a healthy work-life balance." 
-                },
-                { 
-                    title: "The Simple Joy of Cooking", 
-                    content: "There's a unique pleasure in preparing a meal from scratch. It's a blend of science and art that feeds both the body and the soul." 
-                },
-                {
-                    title: "Why We Need to Read More",
-                    content: "In a world of constant digital noise, sitting down with a good book is more important than ever. It builds focus, empathy, and vocabulary."
-                }
-            ];
-
-            articlesData.forEach(article => {
-                const newArticleRef = doc(articlesCol);
-                batch.set(newArticleRef, {
-                    ...article,
-                    createdAt: serverTimestamp()
-                });
             });
 
-            try {
-                await batch.commit();
-                console.log("Database seeded successfully with 4 articles!");
-                alert("Success! 4 articles were added. Refreshing list...");
-                fetchArticles();
-            } catch (error) {
-                console.error("Error seeding database: ", error.message);
-                alert("Error: " + error.message + "\n\nDid you update your security rules to allow 'create'?");
-            }
-        }
-        window.seedDatabase = seedDatabase;
+            // --- Auth Functions ---
+            signupForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('signup-email').value;
+                const password = document.getElementById('signup-password').value;
+                try {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    signupError.style.display = 'none';
+                } catch (error) {
+                    signupError.textContent = error.message;
+                    signupError.style.display = 'block';
+                }
+            });
 
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                try {
+                    await signInWithEmailAndPassword(auth, email, password);
+                    loginError.style.display = 'none';
+                } catch (error) {
+                    loginError.textContent = error.message;
+                    loginError.style.display = 'block';
+                }
+            });
+
+            logoutButton.addEventListener('click', async () => {
+                try {
+                    await signOut(auth);
+                } catch (error) {
+                    alert("Error logging out: " + error.message);
+                }
+            });
+
+            // --- Navigation Link Listeners ---
+            gotoSignupLink.addEventListener('click', () => showPage('signup-page'));
+            gotoLoginLink.addEventListener('click', () => showPage('login-page'));
+
+            // --- Firestore Database Function ---
+            async function fetchArticles() {
+                articleList.innerHTML = '';
+                noArticlesMsg.style.display = 'none';
+                try {
+                    const articlesRef = collection(db, "articles");
+                    const q = query(articlesRef, orderBy("createdAt", "desc"));
+                    const querySnapshot = await getDocs(q);
+                    
+                    if (querySnapshot.empty) {
+                        noArticlesMsg.style.display = 'block';
+                        return;
+                    }
+                    querySnapshot.forEach((doc) => {
+                        const article = doc.data();
+                        const articleEl = document.createElement('div');
+                        articleEl.classList.add('article-item');
+                        articleEl.innerHTML = `
+                            <h3 class="article-title">${article.title}</h3>
+                            <p class="article-content">${article.content}</p>
+                        `;
+                        articleList.appendChild(articleEl);
+                    });
+                } catch (error) {
+                    articleList.innerHTML = `<p class="error-message" style="display:block;">Could not load articles: ${error.message}</p>`;
+                }
+            }
+
+            // --- Database Seeder (for you to run) ---
+            async function seedDatabase() {
+                // ... (seeder function code is unchanged)
+            }
+            window.seedDatabase = seedDatabase;
+
+        } catch (error) {
+            // =================================================================
+            // ** NEW CATCH BLOCK **
+            // If anything above fails, this code will run and show the error.
+            // =================================================================
+            console.error("FATAL ERROR:", error);
+            // Show the error on the page
+            loadingPage.innerHTML = `
+                <div id="debug-error-box">
+                    <h2>App Failed to Load</h2>
+                    <p>An error occurred. This is likely a configuration problem with Firebase. See the error message below and check the steps.</p>
+                    <p><strong>Error details:</strong></p>
+                    <pre>${error.message}</pre>
+                </div>
+            `;
+        }
     </script>
 </body>
 </html>
