@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Stories Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --brand-color: #007aff; /* A modern blue */
+            --dark-text: #222;
+            --light-text: #555;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --border-color: #e0e0e0;
+        }
+
+        /* Basic Reset & Modern Styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--dark-text);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Main App Container */
+        .app-container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        /* Page containers that we will show/hide */
+        .page {
+            display: none; /* Hidden by default */
+            padding: 2.5rem 3rem;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        /* Show the 'active' page */
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Loading Spinner */
+        #loading-page {
+            text-align: center;
+            padding: 4rem;
+        }
+        .spinner {
+            border: 4px solid rgba(0,0,0,0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: var(--brand-color);
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Header & Branding */
+        .app-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .app-header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--dark-text);
+        }
+
+        .app-header h1 .brand-pro {
+            color: var(--brand-color);
+            font-weight: 700;
+        }
+
+        /* Form Styling */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--light-text);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 14px;
+            font-size: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #f9f9f9;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--brand-color);
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+        }
+
+        /* Button Styling */
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #fff;
+            background-color: var(--brand-color);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn:hover {
+            background-color: #005bb5;
+        }
+
+        .btn:active {
+            transform: scale(0.99);
+        }
+
+        /* Link for switching forms */
+        .form-switcher {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .form-switcher .link {
+            color: var(--brand-color);
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .form-switcher .link:hover {
+            text-decoration: underline;
+        }
+
+        /* Error Message */
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-size: 0.9rem;
+            display: none; /* Hidden by default */
+        }
+
+        /* Dashboard (Article List) Styling */
+        #dashboard-page .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #dashboard-page .app-header h1 {
+            font-size: 1.5rem; /* Smaller for dashboard */
+            text-align: left;
+            margin-bottom: 0;
+        }
+
+        .logout-btn {
+            font-size: 0.9rem;
+            color: var(--brand-color);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .logout-btn:hover {
+            text-decoration: underline;
+        }
+
+        .dashboard-welcome {
+            font-size: 0.95rem;
+            color: var(--light-text);
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .dashboard-welcome .user-email {
+            font-weight: 500;
+            color: var(--dark-text);
+        }
+
+        /* Article Styling */
+        #article-list {
+            margin-top: 2rem;
+        }
+
+        .article-item {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .article-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .article-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .article-content {
+            font-size: 1rem;
+            color: var(--light-text);
+            white-space: pre-wrap; /* Respects newlines from the database */
+        }
+
+        #no-articles {
+            text-align: center;
+            color: var(--light-text);
+            font-style: italic;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+
+        <div class="page active" id="loading-page">
+            <div class="spinner"></div>
+            <p>Loading Daily Stories Pro...</p>
+        </div>
+
+        <div class="page" id="login-page">
+            <div class="app-header">
+                <h1>Welcome to Daily Stories <span class="brand-pro">Pro</span></h1>
+            </div>
+            <form id="login-form">
+                <div class="error-message" id="login-error"></div>
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn">Login</button>
+            </form>
+            <div class="form-switcher">
+                Need an account? <span class="link" id="goto-signup">Sign Up</span>
+            </div>
+        </div>
+
+        <div class="page" id="signup-page">
+            <div class="app-header">
+                <h1>Create your Account</h1>
+            </div>
+            <form id="signup-form">
+                <div class="error-message" id="signup-error"></div>
+                <div class="form-group">
+                    <label for="signup-email">Email</label>
+                    <input type="email" id="signup-email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-password">Password (min. 6 characters)</label>
+                    <input type="password" id="signup-password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn">Create Account</button>
+            </form>
+            <div class="form-switcher">
+                Already have an account? <span class="link" id="goto-login">Login</span>
+            </div>
+        </div>
+
+        <div class="page" id="dashboard-page">
+            <div class="app-header">
+                <h1>Daily Stories <span class="brand-pro">Pro</span></h1>
+                <button class="logout-btn" id="logout-button">Logout</button>
+            </div>
+            <div class="dashboard-welcome">
+                Logged in as <span class="user-email" id="user-email-display">...</span>
+            </div>
+            
+            <h2>Latest Articles</h2>
+            <div id="article-list">
+                <div id="no-articles" style="display: none;">
+                    No articles found. Add some in the Firebase console!
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <script type="module">
+        // Import Firebase v9 (modular) SDKs
+        // We are using the "lite" versions for a smaller bundle
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app-lite.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-lite.js";
+        import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-lite.js";
+
+        // =================================================================
+        // TODO: PASTE YOUR FIREBASE CONFIG HERE
+        //
+        // 1. Go to your Firebase project
+        // 2. Go to Project Settings (gear icon)
+        // 3. Scroll down to "Your apps"
+        // 4. Click the "</>" icon to get your web app config
+        // 5. Copy the config object and paste it below
+        // =================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyA82NBvl5rQsH4U0ioMco4bDqkRihkU6LU",
+  			authDomain: "daily-stories-pro-49dda.firebaseapp.com",
+  			projectId: "daily-stories-pro-49dda",
+			storageBucket: "daily-stories-pro-49dda.firebasestorage.app",
+  			messagingSenderId: "678504294247",
+  			appId: "1:678504294247:web:ceeeab86cf0c5d3acef1c2",
+  			measurementId: "G-Z42TVH292B
+        };
+        // =================================================================
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- DOM Element References ---
+        const pages = document.querySelectorAll('.page');
+        const loadingPage = document.getElementById('loading-page');
+        const loginPage = document.getElementById('login-page');
+        const signupPage = document.getElementById('signup-page');
+        const dashboardPage = document.getElementById('dashboard-page');
+
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const loginError = document.getElementById('login-error');
+        const signupError = document.getElementById('signup-error');
+
+        const gotoSignupLink = document.getElementById('goto-signup');
+        const gotoLoginLink = document.getElementById('goto-login');
+        const logoutButton = document.getElementById('logout-button');
+
+        const userEmailDisplay = document.getElementById('user-email-display');
+        const articleList = document.getElementById('article-list');
+        const noArticlesMsg = document.getElementById('no-articles');
+
+        // --- Page Navigation Function ---
+        function showPage(pageId) {
+            pages.forEach(page => {
+                page.classList.remove('active');
+            });
+            const activePage = document.getElementById(pageId);
+            if (activePage) {
+                activePage.classList.add('active');
+            }
+        }
+
+        // --- Firebase Auth State Listener ---
+        // This is the core of the app. It checks if the user is logged in or not.
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in
+                console.log("User is logged in:", user.email);
+                userEmailDisplay.textContent = user.email;
+                fetchArticles(); // Fetch articles from Firestore
+                showPage('dashboard-page'); // Show the dashboard
+            } else {
+                // User is signed out
+                console.log("User is logged out.");
+                showPage('login-page'); // Show the login page
+            }
+        });
+
+        // --- Auth Functions ---
+
+        // Handle Sign Up
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+                // Auth state listener (onAuthStateChanged) will handle redirect
+                signupError.style.display = 'none';
+            } catch (error) {
+                console.error("Signup error:", error.message);
+                signupError.textContent = error.message;
+                signupError.style.display = 'block';
+            }
+        });
+
+        // Handle Login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                // Auth state listener (onAuthStateChanged) will handle redirect
+                loginError.style.display = 'none';
+            } catch (error) {
+                console.error("Login error:", error.message);
+                loginError.textContent = error.message;
+                loginError.style.display = 'block';
+            }
+        });
+
+        // Handle Logout
+        logoutButton.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                // Auth state listener (onAuthStateChanged) will handle redirect
+            } catch (error) {
+                console.error("Logout error:", error.message);
+                alert("Error logging out: " + error.message);
+            }
+        });
+
+        // --- Navigation Link Listeners ---
+        gotoSignupLink.addEventListener('click', () => showPage('signup-page'));
+        gotoLoginLink.addEventListener('click', () => showPage('login-page'));
+
+        // --- Firestore Database Function ---
+
+        // Fetch and display articles
+        async function fetchArticles() {
+            articleList.innerHTML = ''; // Clear existing articles
+            noArticlesMsg.style.display = 'none';
+            
+            try {
+                // Query the 'articles' collection, order by 'createdAt' descending
+                const articlesRef = collection(db, "articles");
+                const q = query(articlesRef, orderBy("createdAt", "desc")); // Assumes you have a 'createdAt' field
+                
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    noArticlesMsg.style.display = 'block';
+                    return;
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const article = doc.data();
+                    
+                    // Create HTML elements for the article
+                    const articleEl = document.createElement('div');
+                    articleEl.classList.add('article-item');
+                    
+                    articleEl.innerHTML = `
+                        <h3 class="article-title">${article.title}</h3>
+                        <p class="article-content">${article.content}</p>
+                    `;
+                    
+                    articleList.appendChild(articleEl);
+                });
+
+            } catch (error) {
+                console.error("Error fetching articles: ", error);
+                articleList.innerHTML = '<p class="error-message" style="display:block;">Could not load articles.</p>';
+            }
+        }
+
+    </script>
+
+</body>
+</html>
